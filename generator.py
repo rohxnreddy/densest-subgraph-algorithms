@@ -8,6 +8,7 @@ DEFAULT_SEED = None
 DEFAULT_INPUTS_DIR = "inputs"
 DEFAULT_INPUT_FILENAME = "input.txt"
 
+#Zero-based indexing for nodes
 def generate_graph(n, m, seed=None):
     if seed is not None:
         random.seed(seed)
@@ -15,11 +16,16 @@ def generate_graph(n, m, seed=None):
     edges = set()
 
     while len(edges) < m:
-        u = random.randint(1, n)
-        v = random.randint(1, n)
-        if u != v:
-            if (u, v) not in edges and (v, u) not in edges:
-                edges.add((u, v))
+        u = random.randint(0, n - 1)
+        v = random.randint(0, n - 1)
+
+        if u == v:
+            continue
+
+        a = min(u, v)
+        b = max(u, v)
+
+        edges.add((a, b))
 
     return edges
 

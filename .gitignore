@@ -1,0 +1,33 @@
+# -------- Build files --------
+*.o
+*.out
+*.exe
+*.a
+*.so
+
+# Compiled binaries (your executables)
+flow1
+flow4
+greedy
+greedypp
+a.out
+
+# -------- Python --------
+__pycache__/
+*.pyc
+
+# -------- OS junk --------
+.DS_Store
+Thumbs.db
+
+# -------- Editor / IDE --------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -------- Logs --------
+*.log
+
+# -------- Misc --------
+*.tmp
