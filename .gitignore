@@ -11,6 +11,10 @@ flow4
 greedy
 greedypp
 a.out
+1_flow1
+2_flow4
+3_greedy
+4_greedypp
 
 # -------- Python --------
 __pycache__/

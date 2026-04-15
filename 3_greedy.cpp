@@ -58,11 +58,52 @@ void read_input(string filename) {
 }
 
 void algorithm() {
-    // Implement the Alogoithm here
-    // Input graph is stored in adj and number of nodes and edges are stored in n and m respectively
-    // output the nodes in the densest subgraph in the vector "nodes" and the density in the variable "density"
-    // do density = 0.0; nodes.clear();before starting the algorithm to initialize the output variables
-    // Update Algorithm name in output function as well
+    density = 0.0;
+    nodes.clear();
+
+    if (n == 0) return;
+
+    vector<int> current_degrees(n);
+    set<pair<int, int>> min_degree_heap;
+    vector<bool> in_h(n, true);
+    vector<int> current_nodes;
+
+    for (int i = 0; i < n; ++i) {
+        current_degrees[i] = adj[i].size();
+        min_degree_heap.insert({current_degrees[i], i});
+        current_nodes.push_back(i);
+    }
+
+    long long current_edge_count = m;
+    int current_node_count = n;
+    density = (double)current_edge_count / current_node_count;
+    nodes = current_nodes;
+
+    while (!min_degree_heap.empty()) {
+        int u = min_degree_heap.begin()->second;
+        min_degree_heap.erase(min_degree_heap.begin());
+        in_h[u] = false;
+
+        for (int v : adj[u]) {
+            if (in_h[v]) {
+                min_degree_heap.erase({current_degrees[v], v});
+                current_degrees[v]--;
+                min_degree_heap.insert({current_degrees[v], v});
+                current_edge_count--;
+            }
+        }
+        current_node_count--;
+        if (current_node_count > 0) {
+            double current_density = (double)current_edge_count / current_node_count;
+            if(current_density > density) {
+                density = current_density;
+                nodes.clear();
+                for (int i = 0; i < n; ++i) {
+                    if (in_h[i]) nodes.push_back(i);
+                }
+            }
+        }
+    }
 }
 
 void print_output(string filename){
@@ -80,7 +121,7 @@ void print_output(string filename){
 
     sort(nodes.begin(), nodes.end());
 
-    fprintf(file, "Algorithm: \n");
+    fprintf(file, "Algorithm: Greedy \n");
     fprintf(file, "Density: %.6f\n", density);
     fprintf(file, "Number of nodes: %d\n", (int)nodes.size());
 
