@@ -1,14 +1,14 @@
-#include <iostream>
-#include <vector>
-#include <queue>
-#include <stack>
-#include <limits>
-#include <cstring>
 #include <algorithm>
+#include <cstring>
+#include <iostream>
+#include <limits>
+#include <queue>
 #include <set>
-#include <cmath>
+#include <stack>
+#include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <cmath>
 
 using namespace std;
 
@@ -20,67 +20,71 @@ vector<vector<int>> adj;
 double density;
 vector<int> nodes;
 
+// --- Max Flow (Dinic's Algorithm) Implementation ---
 struct Edge {
     int to;
-    double cap, flow;
+    double capacity;
+    double flow;
     int rev;
 };
 
-vector<vector<Edge>> adj_flow;
-vector<int> level_arr, ptr_arr;
+vector<vector<Edge>> flow_adj;
+vector<int> level_arr;
+vector<int> ptr_arr;
 
-void add_edge(int from, int to, double cap) {
-    adj_flow[from].push_back({to, cap, 0.0, (int)adj_flow[to].size()});
-    adj_flow[to].push_back({from, 0.0, 0.0, (int)adj_flow[from].size() - 1});
+void add_flow_edge(int from, int to, double cap) {
+    flow_adj[from].push_back({to, cap, 0, (int)flow_adj[to].size()});
+    flow_adj[to].push_back({from, 0, 0, (int)flow_adj[from].size() - 1});
 }
 
-bool bfs(int S, int T) {
+bool bfs(int s, int t) {
     fill(level_arr.begin(), level_arr.end(), -1);
-    level_arr[S] = 0;
+    level_arr[s] = 0;
     queue<int> q;
-    q.push(S);
+    q.push(s);
     while (!q.empty()) {
-        int v = q.front(); 
+        int v = q.front();
         q.pop();
-        for (auto& edge : adj_flow[v]) {
-            if (edge.cap - edge.flow > 1e-7 && level_arr[edge.to] == -1) {
+        for (auto &edge : flow_adj[v]) {
+            if (edge.capacity - edge.flow > 1e-9 && level_arr[edge.to] == -1) {
                 level_arr[edge.to] = level_arr[v] + 1;
                 q.push(edge.to);
             }
         }
     }
-    return level_arr[T] != -1;
+    return level_arr[t] != -1;
 }
 
-double dfs(int v, int T, double pushed) {
-    if (pushed < 1e-7) return 0.0;
-    if (v == T) return pushed;
-    for (int& cid = ptr_arr[v]; cid < adj_flow[v].size(); ++cid) {
-        auto& edge = adj_flow[v][cid];
+double dfs(int v, int t, double pushed) {
+    if (pushed == 0) return 0;
+    if (v == t) return pushed;
+    for (int &cid = ptr_arr[v]; cid < flow_adj[v].size(); ++cid) {
+        auto &edge = flow_adj[v][cid];
         int tr = edge.to;
-        if (level_arr[v] + 1 != level_arr[tr] || edge.cap - edge.flow < 1e-7) continue;
-        double push = dfs(tr, T, min(pushed, edge.cap - edge.flow));
-        if (push < 1e-7) continue;
-        edge.flow += push;
-        adj_flow[tr][edge.rev].flow -= push;
-        return push;
+        if (level_arr[v] + 1 != level_arr[tr] || edge.capacity - edge.flow < 1e-9)
+            continue;
+        double tr_pushed = dfs(tr, t, min(pushed, edge.capacity - edge.flow));
+        if (tr_pushed == 0) continue;
+        edge.flow += tr_pushed;
+        flow_adj[tr][edge.rev].flow -= tr_pushed;
+        return tr_pushed;
     }
-    return 0.0;
+    return 0;
 }
 
-double dinic(int S, int T) {
+double dinic(int s, int t) {
     double flow = 0;
-    while (bfs(S, T)) {
+    while (bfs(s, t)) {
         fill(ptr_arr.begin(), ptr_arr.end(), 0);
-        while (double pushed = dfs(S, T, 1e18)) {
+        while (double pushed = dfs(s, t, numeric_limits<double>::infinity())) {
             flow += pushed;
         }
     }
     return flow;
 }
 
+// Zero-based indexing for nodes
 void read_input(string filename) {
-
     FILE* file = fopen(filename.c_str(), "r");
     if (!file) {
         perror("Error opening file");
@@ -94,18 +98,13 @@ void read_input(string filename) {
     set<pair<int,int>> edges;
 
     while (fgets(line, sizeof(line), file)) {
-
         if (line[0] == '#') continue;
 
         if (sscanf(line, "%d %d", &u, &v) == 2) {
-
             if (u == v) continue;
-
             int a = min(u, v);
             int b = max(u, v);
-
             edges.insert({a, b});
-
             maxNode = max(maxNode, max(u, v));
         }
     }
@@ -128,7 +127,6 @@ void read_input(string filename) {
 void algorithm() {
     density = 0.0;
     nodes.clear();
-
     if (n == 0) return;
 
     // Helper to evaluate and globally track the best subset
@@ -147,9 +145,8 @@ void algorithm() {
             nodes = subset;
         }
     };
-    vector<int> all_nodes(n);
-    for (int i = 0; i < n; ++i) all_nodes[i] = i;
-    evaluate_subset(all_nodes);
+
+    // Step 1: Core decomposition (Corrected Batagelj & Zaveršnik)
     vector<int> deg(n);
     for (int i = 0; i < n; ++i) deg[i] = adj[i].size();
 
@@ -162,6 +159,7 @@ void algorithm() {
     int E_res = m;
     double max_rho = 0.0;
     int k_max = 0;
+    int current_core = 0; // Tracks the peeling level
 
     while (!pq.empty()) {
         double current_rho = (V_res > 0) ? (double)E_res / V_res : 0.0;
@@ -171,8 +169,10 @@ void algorithm() {
         int u = pq.begin()->second;
         pq.erase(pq.begin());
 
-        core[u] = d;
-        k_max = max(k_max, d);
+        // FIX: A node's core number cannot be lower than the graph's current peel level
+        current_core = max(current_core, d);
+        core[u] = current_core;
+        k_max = max(k_max, current_core);
         removed[u] = true;
         V_res--;
 
@@ -185,6 +185,8 @@ void algorithm() {
             }
         }
     }
+
+    // Helper to get connected components
     auto get_ccs = [&](const vector<int>& valid_nodes) {
         vector<vector<int>> ccs;
         unordered_set<int> valid_set(valid_nodes.begin(), valid_nodes.end());
@@ -211,11 +213,14 @@ void algorithm() {
         }
         return ccs;
     };
+
+    // Pruning: Locate k'-core
     int k_prime = ceil(max_rho);
     vector<int> k_prime_nodes;
     for (int i = 0; i < n; ++i) {
         if (core[i] >= k_prime) k_prime_nodes.push_back(i);
     }
+    
     vector<vector<int>> ccs_prime = get_ccs(k_prime_nodes);
     double max_rho_double_prime = 0.0;
     for (auto& comp : ccs_prime) {
@@ -232,7 +237,6 @@ void algorithm() {
 
     int k_double_prime = ceil(max_rho_double_prime);
     double l = max_rho_double_prime;
-    double u_bound = k_max;
 
     vector<int> k_double_prime_nodes;
     for (int i = 0; i < n; ++i) {
@@ -241,106 +245,114 @@ void algorithm() {
 
     vector<vector<int>> C_list = get_ccs(k_double_prime_nodes);
 
+    // Flow Network Constructor
+    auto build_and_cut = [&](const vector<int>& current_comp, double alpha) -> vector<int> {
+        int num_nodes = current_comp.size();
+        if (num_nodes == 0) return {};
+        
+        int S_node = 0, T_node = num_nodes + 1;
+        flow_adj.assign(num_nodes + 2, vector<Edge>());
+        level_arr.assign(num_nodes + 2, -1);
+        ptr_arr.assign(num_nodes + 2, 0);
+
+        unordered_map<int, int> to_local;
+        for (int i = 0; i < num_nodes; ++i) {
+            to_local[current_comp[i]] = i + 1;
+        }
+
+        vector<int> deg_C(num_nodes + 1, 0);
+        vector<pair<int, int>> edges_C;
+        
+        for (int i = 0; i < num_nodes; ++i) {
+            int u = current_comp[i];
+            for (int v : adj[u]) {
+                if (u < v && to_local.count(v)) {
+                    edges_C.push_back({to_local[u], to_local[v]});
+                    deg_C[to_local[u]]++;
+                    deg_C[to_local[v]]++;
+                }
+            }
+        }
+
+        for (int i = 1; i <= num_nodes; ++i) {
+            add_flow_edge(S_node, i, (double)deg_C[i]);
+            add_flow_edge(i, T_node, 2.0 * alpha);
+        }
+        for (auto e : edges_C) {
+            add_flow_edge(e.first, e.second, 1.0);
+            add_flow_edge(e.second, e.first, 1.0);
+        }
+
+        dinic(S_node, T_node);
+
+        vector<bool> visited(num_nodes + 2, false);
+        queue<int> q;
+        q.push(S_node);
+        visited[S_node] = true;
+        vector<int> U;
+        
+        while (!q.empty()) {
+            int v = q.front(); q.pop();
+            if (v >= 1 && v <= num_nodes) U.push_back(current_comp[v - 1]);
+            
+            for (auto& edge : flow_adj[v]) {
+                if (edge.capacity - edge.flow > 1e-9 && !visited[edge.to]) {
+                    visited[edge.to] = true;
+                    q.push(edge.to);
+                }
+            }
+        }
+        return U;
+    };
+
+    // Iterating components
     for (auto& initial_comp : C_list) {
-        evaluate_subset(initial_comp);
         vector<int> comp = initial_comp;
+        evaluate_subset(comp);
+        
+        int req_core = ceil(l);
+        vector<int> next_comp;
+        for (int v : comp) {
+            if (core[v] >= req_core) next_comp.push_back(v);
+        }
+        comp = next_comp;
+        
+        if (comp.size() <= 1) continue;
 
-        while (true) {
-            if (comp.size() <= 1) break;
-            int req_core = ceil(l);
-            vector<int> next_comp;
-            for (int v : comp) {
-                if (core[v] >= req_core) next_comp.push_back(v);
-            }
-            comp = next_comp;
+        vector<int> init_U = build_and_cut(comp, l);
+        if (init_U.empty()) continue; 
 
-            if (comp.size() <= 1) break;
+        double u_bound = k_max; 
+        double eps = 1.0 / ((double)comp.size() * (comp.size() - 1.0));
 
-            int num_nodes = comp.size();
-            unordered_map<int, int> to_local;
-            for (int i = 0; i < num_nodes; ++i) to_local[comp[i]] = i + 1;
-
-            int m_C = 0;
-            vector<int> deg_C(num_nodes + 1, 0);
-            vector<pair<int, int>> edges_C;
-
-            for (int i = 0; i < num_nodes; ++i) {
-                int u = comp[i];
-                for (int v : adj[u]) {
-                    if (u < v && to_local.count(v)) {
-                        edges_C.push_back({to_local[u], to_local[v]});
-                        deg_C[to_local[u]]++;
-                        deg_C[to_local[v]]++;
-                        m_C++;
+        // Binary Search Process
+        while (u_bound - l >= eps) {
+            double alpha = (l + u_bound) / 2.0;
+            vector<int> U = build_and_cut(comp, alpha);
+            
+            if (U.empty()) {
+                u_bound = alpha; 
+            } else {
+                if (alpha > ceil(l)) {
+                    int current_ceil = ceil(alpha);
+                    vector<int> filtered_comp;
+                    for (int v : comp) {
+                        if (core[v] >= current_ceil) filtered_comp.push_back(v);
+                    }
+                    comp = filtered_comp;
+                    if (comp.size() > 1) {
+                        eps = 1.0 / ((double)comp.size() * (comp.size() - 1.0));
                     }
                 }
-            }
-            auto build_and_cut = [&](double alpha) -> vector<int> {
-                int S = 0, T = num_nodes + 1;
-                adj_flow.assign(num_nodes + 2, vector<Edge>());
-                level_arr.assign(num_nodes + 2, -1);
-                ptr_arr.assign(num_nodes + 2, 0);
-
-                for (int i = 1; i <= num_nodes; ++i) {
-                    add_edge(S, i, m_C);
-                    add_edge(i, T, m_C + 2.0 * alpha - deg_C[i]);
-                }
-                for (auto e : edges_C) {
-                    add_edge(e.first, e.second, 1.0);
-                    add_edge(e.second, e.first, 1.0);
-                }
-
-                dinic(S, T);
-
-                vector<bool> visited(num_nodes + 2, false);
-                queue<int> q;
-                q.push(S);
-                visited[S] = true;
-                while (!q.empty()) {
-                    int v = q.front(); q.pop();
-                    for (auto& edge : adj_flow[v]) {
-                        if (edge.cap - edge.flow > 1e-7 && !visited[edge.to]) {
-                            visited[edge.to] = true;
-                            q.push(edge.to);
-                        }
-                    }
-                }
-
-                vector<int> U;
-                for (int i = 1; i <= num_nodes; ++i) {
-                    if (visited[i]) U.push_back(comp[i - 1]);
-                }
-                return U;
-            };
-            vector<int> U_l = build_and_cut(l);
-            if (U_l.empty()) break; 
-
-            double eps = 1.0 / ((double)num_nodes * (num_nodes - 1.0));
-            bool shrunk = false;
-            while (u_bound - l >= eps) {
-                double alpha = (l + u_bound) / 2.0;
-                vector<int> U = build_and_cut(alpha);
-                
-                if (U.empty()) {
-                    u_bound = alpha; // S = {s}
-                } else {
-                    l = alpha;
-                    evaluate_subset(U);
-                    comp = U; 
-                    break; 
-                }
-            }
-
-            if (!shrunk) {
-                break;
+                l = alpha;
+                evaluate_subset(U);
             }
         }
     }
 }
 
 void print_output(string filename) {
-    FILE* file;
-
+    FILE *file;
     if (filename == "stdout") {
         file = stdout;
     } else {
@@ -352,6 +364,7 @@ void print_output(string filename) {
     }
 
     sort(nodes.begin(), nodes.end());
+
     fprintf(file, "Algorithm: CoreExact\n");
     fprintf(file, "Density: %.6f\n", density);
     fprintf(file, "Number of nodes: %d\n", (int)nodes.size());
@@ -364,15 +377,15 @@ void print_output(string filename) {
     if (file != stdout) fclose(file);
 }
 
-int main(int argc, char* argv[]){
+int main(int argc, char *argv[]) {
     inputFile = "testcases/Wiki-Vote.txt";
     outputFile = "stdout";
 
-    if (argc == 2){
+    if (argc == 2) {
         inputFile = argv[1];
     }
 
-    if (argc == 3){
+    if (argc == 3) {
         inputFile = argv[1];
         outputFile = argv[2];
     }
