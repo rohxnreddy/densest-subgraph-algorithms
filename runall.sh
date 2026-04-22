@@ -34,14 +34,18 @@ run_one() {
 	local exe="$2"
 	local input_file="$3"
 	local output_file="$4"
+	local elapsed
 
 	echo "Running $algo_name on $input_file..."
 	echo "========== $algo_name ==========" >> "$output_file"
-	"./$exe" "$input_file" >> "$output_file"
+	elapsed=$( { TIMEFORMAT='%3R'; time "./$exe" "$input_file" >> "$output_file"; } 2>&1 )
+	elapsed="${elapsed//$'\n'/}"
+	echo -e "    Completed in ${elapsed}s"
 	echo "" >> "$output_file"
 }
 
 for input_file in "${INPUT_FILES[@]}"; do
+	testcase_start="$SECONDS"
 	base_name="$(basename "$input_file")"
 	base_name="${base_name%.txt}"
 	output_file="outputs/${base_name}_output.txt"
@@ -57,7 +61,11 @@ for input_file in "${INPUT_FILES[@]}"; do
 	run_one "Greedy" "greedy" "$input_file" "$output_file"
 	run_one "Greedy++" "greedypp" "$input_file" "$output_file"
 
-	echo -e "Output file at $output_file \n"
+	testcase_elapsed=$((SECONDS - testcase_start))
+
+	echo -e "\nTotal time for $input_file: ${testcase_elapsed}s"
+
+	echo -e "Output file at $output_file \n\n"
 done
 
 echo "Done."
