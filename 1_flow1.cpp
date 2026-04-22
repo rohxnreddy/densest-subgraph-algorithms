@@ -86,37 +86,43 @@ double dinic(int s, int t) {
 // Zero-based indexing for nodes
 void read_input(string filename) {
 
-    FILE *file = fopen(filename.c_str(), "r");
+    FILE* file = fopen(filename.c_str(), "r");
     if (!file) {
         perror("Error opening file");
         exit(1);
     }
 
+    char line[256];
     int u, v;
+    int maxNode = -1;
 
-    if (fscanf(file, "%d %d", &n, &m) != 2) {
-        cout << "Invalid input format\n";
-        exit(1);
-    }
+    set<pair<int,int>> edges;
 
-    set<pair<int, int>> edges;
+    while (fgets(line, sizeof(line), file)) {
 
-    while (fscanf(file, "%d %d", &u, &v) == 2) {
+        if (line[0] == '#') continue;
 
-        if (u == v)
-            continue;
+        if (sscanf(line, "%d %d", &u, &v) == 2) {
 
-        int a = min(u, v);
-        int b = max(u, v);
+            if (u == v) continue;
 
-        edges.insert({a, b});
+            int a = min(u, v);
+            int b = max(u, v);
+
+            edges.insert({a, b});
+
+            maxNode = max(maxNode, max(u, v));
+        }
     }
 
     fclose(file);
 
+    n = maxNode + 1;
     m = edges.size();
 
     adj.assign(n, vector<int>());
+    density = 0.0;
+    nodes.clear();
 
     for (auto &e : edges) {
         adj[e.first].push_back(e.second);
@@ -213,7 +219,7 @@ void print_output(string filename) {
 }
 
 int main(int argc, char *argv[]) {
-    inputFile = "inputs/input.txt";
+    inputFile = "testcases/Wiki-Vote.txt";
     outputFile = "stdout";
 
     if (argc == 2) {

@@ -1,47 +1,63 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Create folders
-mkdir -p outputs
-mkdir -p inputs
+set -euo pipefail
 
-# -------- GENERATE INPUT --------
-echo "Generating graph..."
-python3 generator.py "$@"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
-INPUT_FILE="inputs/input.txt"
-OUTPUT_FILE="outputs/output.txt"
+# If args are provided, treat them as input files.
+# Otherwise, run on the announced testcases in testcases/.
+INPUT_FILES=()
+if [[ "$#" -gt 0 ]]; then
+	INPUT_FILES=("$@")
+else
+	INPUT_FILES=(
+        "testcases/wiki-Vote.txt"
+		"testcases/email-Enron.txt"
+        "testcases/as-skitter.txt"
+	)
+fi
 
-# Clear previous output
-> "$OUTPUT_FILE"
+for f in "${INPUT_FILES[@]}"; do
+	if [[ ! -f "$f" ]]; then
+		echo "Error: input file not found: $f" >&2
+		exit 1
+	fi
+done
 
-# -------- COMPILE --------
-echo "Compiling..."
+echo -e "Compiling... \n"
+make -s all
+mkdir -p "outputs"
 
-g++ 1_flow1.cpp -O2 -o flow1
-g++ 2_flow4.cpp -O2 -o flow4
-g++ 3_greedy.cpp -O2 -o greedy
-g++ 4_greedypp.cpp -O2 -o greedypp
+run_one() {
+	local algo_name="$1"
+	local exe="$2"
+	local input_file="$3"
+	local output_file="$4"
 
-# -------- RUN ALL --------
+	echo "Running $algo_name on $input_file..."
+	echo "========== $algo_name ==========" >> "$output_file"
+	"./$exe" "$input_file" >> "$output_file"
+	echo "" >> "$output_file"
+}
 
-echo "Running Flow Algo-1..."
-echo "========== Flow Algo-1 ==========" >> "$OUTPUT_FILE"
-./flow1 "$INPUT_FILE" >> "$OUTPUT_FILE"
-echo "" >> "$OUTPUT_FILE"
+for input_file in "${INPUT_FILES[@]}"; do
+	base_name="$(basename "$input_file")"
+	base_name="${base_name%.txt}"
+	output_file="outputs/${base_name}_output.txt"
 
-echo "Running Flow Algo-4..."
-echo "========== Flow Algo-4 ==========" >> "$OUTPUT_FILE"
-./flow4 "$INPUT_FILE" >> "$OUTPUT_FILE"
-echo "" >> "$OUTPUT_FILE"
+	> "$output_file"
+	echo "########################################" >> "$output_file"
+	echo "Testcase: $input_file" >> "$output_file"
+	echo "########################################" >> "$output_file"
+	echo "" >> "$output_file"
 
-echo "Running Greedy..."
-echo "========== Greedy ==========" >> "$OUTPUT_FILE"
-./greedy "$INPUT_FILE" >> "$OUTPUT_FILE"
-echo "" >> "$OUTPUT_FILE"
+	run_one "Flow Algo-1" "flow1" "$input_file" "$output_file"
+	run_one "Flow Algo-4" "flow4" "$input_file" "$output_file"
+	run_one "Greedy" "greedy" "$input_file" "$output_file"
+	run_one "Greedy++" "greedypp" "$input_file" "$output_file"
 
-echo "Running Greedy++..."
-echo "========== Greedy++ ==========" >> "$OUTPUT_FILE"
-./greedypp "$INPUT_FILE" >> "$OUTPUT_FILE"
-echo "" >> "$OUTPUT_FILE"
+	echo -e "Output file at $output_file \n"
+done
 
-echo "Done. Output saved to $OUTPUT_FILE"
+echo "Done."

@@ -13,7 +13,7 @@ This repo contains four C++ programs (Flow Algo-1, Flow Algo-4, Greedy, Greedy++
 - compute a candidate densest subgraph (set of nodes), and
 - print the resulting node set and density.
 
-A small Python generator is included to create random test graphs, and `runall.sh` compiles and runs all implementations on the generated input.
+`runall.sh` compiles and runs all implementations on one or more input files.
 
 ## Directory Structure
 
@@ -23,12 +23,16 @@ A small Python generator is included to create random test graphs, and `runall.s
 ├── 2_flow4.cpp
 ├── 3_greedy.cpp
 ├── 4_greedypp.cpp
-├── generator.py
+├── Makefile
 ├── runall.sh
-├── inputs/
-│   └── input.txt
 ├── outputs/
-│   └── output.txt
+│   ├── as-skitter_output.txt
+│   ├── email-Enron_output.txt
+│   └── wiki-Vote_output.txt
+├── testcases/
+│   ├── wiki-Vote.txt
+│   ├── email-Enron.txt
+│   └── as-skitter.txt.gz
 └── papers/
 	├── dense-subgraph.pdf
 	└── flowless.pdf
@@ -51,19 +55,37 @@ Or just run the provided script (it compiles for you):
 bash runall.sh
 ```
 
+## Testcases 
+
+Testcases are under `testcases/`.
+
+### Skitter: unzip before running
+
+The Skitter edge list is large, so the plain-text file `testcases/as-skitter.txt` is **not committed** (it is listed in `.gitignore`).
+Instead, the repo includes the compressed file:
+
+- `testcases/as-skitter.txt.gz`
+
+To generate the ignored text file locally, unzip it:
+
+```bash
+gunzip -k testcases/as-skitter.txt.gz
+```
+
 ## Run
 
 ### Run all implementations (recommended)
 
-`runall.sh` will:
+`runall.sh` will compile all four C++ programs and run them on one or more input files.
 
-1) generate `inputs/input.txt` via `generator.py` (you can pass generator args through),
-2) compile all four C++ programs, and
-3) append all outputs into `outputs/output.txt`.
+- With no args, it runs on the testcases listed inside the script (by default `testcases/wiki-Vote.txt`).
+- With args, it treats each arg as an input edge-list file.
+
+For each input file, it writes a separate output report under `outputs/` named `<testcase>_output.txt`.
 
 ```bash
 bash runall.sh
-bash runall.sh -n 100 -m 500 --seed 42
+bash runall.sh testcases/wiki-Vote.txt
 ```
 
 ### Run an individual implementation
@@ -77,7 +99,7 @@ Each C++ program accepts up to 2 CLI arguments:
 ./greedypp [input_file] [output_file]
 ```
 
-- No args: reads `inputs/input.txt`, writes to stdout.
+- No args: reads `testcases/wiki-Vote.txt` (or pass an explicit input file), writes to stdout.
 - One arg: `./flow1 path/to/graph.txt` writes to stdout.
 - Two args: `./flow1 in.txt out.txt` writes exactly to `out.txt`.
 
@@ -85,36 +107,9 @@ Examples:
 
 ```bash
 ./greedy
-./flow4 inputs/input.txt
-./greedypp inputs/input.txt outputs/greedypp_output.txt
+./flow4 testcases/wiki-Vote.txt
+./greedypp testcases/wiki-Vote.txt outputs/greedypp_output.txt
 ```
-
-## Input format
-
-Input is a plain-text undirected edge list.
-
-The first line is:
-
-```text
-n m
-```
-
-where:
-
-- `n` is the number of nodes (assumed 0-based IDs `0..n-1`),
-- `m` is the (declared) number of edges.
-
-Each subsequent line is an edge:
-
-```text
-u v
-```
-
-Notes (based on the current C++ parsing logic):
-
-- self-loops (`u == v`) are ignored,
-- duplicate edges are removed,
-- edges are treated as undirected (`(u,v)` is the same as `(v,u)`).
 
 ## Output format
 
@@ -125,22 +120,7 @@ Each implementation prints a short report:
 - `Number of nodes:` (size of the returned node set)
 - `Nodes:` list (one node ID per line)
 
-When using `runall.sh`, outputs from all four programs are concatenated into `outputs/output.txt` with section headers.
-
-## Generate a random graph
-
-`generator.py` writes a random undirected graph to `inputs/input.txt`.
-
-```bash
-python3 generator.py
-python3 generator.py -n 50 -m 200 --seed 7
-```
-
-Then run any implementation:
-
-```bash
-./flow1 inputs/input.txt
-```
+When using `runall.sh`, each testcase gets its own report file under `outputs/` named `<testcase>_output.txt`, with all four algorithms appended with section headers.
 
 ## Contributors
 
@@ -153,7 +133,5 @@ Then run any implementation:
 | [satvik-A](https://github.com/satvik-A) | Satvik Aderla | 2023A7PS0167H |
 
 ## References
-
-- Charikar, M. (2000). **Greedy approximation algorithms for finding dense components in a graph**.
-- (See PDFs under `papers/` for additional background.)
+- See PDFs under `papers/` for additional background.
 
