@@ -20,7 +20,6 @@ vector<vector<int>> adj;
 double density;
 vector<int> nodes;
 
-// --- Max Flow (Dinic's Algorithm) Implementation ---
 struct Edge {
     int to;
     double capacity;
@@ -83,7 +82,6 @@ double dinic(int s, int t) {
     return flow;
 }
 
-// Zero-based indexing for nodes
 void read_input(string filename) {
     FILE* file = fopen(filename.c_str(), "r");
     if (!file) {
@@ -129,7 +127,6 @@ void algorithm() {
     nodes.clear();
     if (n == 0) return;
 
-    // Helper to evaluate and globally track the best subset
     auto evaluate_subset = [&](const vector<int>& subset) {
         if (subset.empty()) return;
         unordered_set<int> in_sub(subset.begin(), subset.end());
@@ -146,7 +143,6 @@ void algorithm() {
         }
     };
 
-    // Step 1: Core decomposition (Corrected Batagelj & Zaveršnik)
     vector<int> deg(n);
     for (int i = 0; i < n; ++i) deg[i] = adj[i].size();
 
@@ -159,7 +155,7 @@ void algorithm() {
     int E_res = m;
     double max_rho = 0.0;
     int k_max = 0;
-    int current_core = 0; // Tracks the peeling level
+    int current_core = 0;
 
     while (!pq.empty()) {
         double current_rho = (V_res > 0) ? (double)E_res / V_res : 0.0;
@@ -169,7 +165,6 @@ void algorithm() {
         int u = pq.begin()->second;
         pq.erase(pq.begin());
 
-        // FIX: A node's core number cannot be lower than the graph's current peel level
         current_core = max(current_core, d);
         core[u] = current_core;
         k_max = max(k_max, current_core);
@@ -186,7 +181,6 @@ void algorithm() {
         }
     }
 
-    // Helper to get connected components
     auto get_ccs = [&](const vector<int>& valid_nodes) {
         vector<vector<int>> ccs;
         unordered_set<int> valid_set(valid_nodes.begin(), valid_nodes.end());
@@ -214,7 +208,6 @@ void algorithm() {
         return ccs;
     };
 
-    // Pruning: Locate k'-core
     int k_prime = ceil(max_rho);
     vector<int> k_prime_nodes;
     for (int i = 0; i < n; ++i) {
@@ -245,7 +238,6 @@ void algorithm() {
 
     vector<vector<int>> C_list = get_ccs(k_double_prime_nodes);
 
-    // Flow Network Constructor
     auto build_and_cut = [&](const vector<int>& current_comp, double alpha) -> vector<int> {
         int num_nodes = current_comp.size();
         if (num_nodes == 0) return {};
@@ -305,7 +297,6 @@ void algorithm() {
         return U;
     };
 
-    // Iterating components
     for (auto& initial_comp : C_list) {
         vector<int> comp = initial_comp;
         evaluate_subset(comp);
