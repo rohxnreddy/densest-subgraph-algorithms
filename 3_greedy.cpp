@@ -72,44 +72,54 @@ void algorithm() {
 
     vector<int> current_degrees(n);
     set<pair<int, int>> min_degree_heap;
+    using HeapIt = set<pair<int, int>>::iterator;
+    vector<HeapIt> heap_it(n, min_degree_heap.end());
     vector<bool> in_h(n, true);
-    vector<int> current_nodes;
+    vector<int> removed_at(n, 0);
+    int removed_count = 0;
 
     for (int i = 0; i < n; ++i) {
         current_degrees[i] = adj[i].size();
-        min_degree_heap.insert({current_degrees[i], i});
-        current_nodes.push_back(i);
+        heap_it[i] = min_degree_heap.insert({current_degrees[i], i}).first;
     }
 
     long long current_edge_count = m;
     int current_node_count = n;
-    density = (double)current_edge_count / current_node_count;
-    nodes = current_nodes;
+    double best_density = (double)current_edge_count / current_node_count;
+    int best_removed_count = 0; // 0 means keep all nodes
 
     while (!min_degree_heap.empty()) {
         int u = min_degree_heap.begin()->second;
         min_degree_heap.erase(min_degree_heap.begin());
+        heap_it[u] = min_degree_heap.end();
         in_h[u] = false;
+        removed_at[u] = ++removed_count;
 
         for (int v : adj[u]) {
             if (in_h[v]) {
-                min_degree_heap.erase({current_degrees[v], v});
+                if (heap_it[v] != min_degree_heap.end()) {
+                    min_degree_heap.erase(heap_it[v]);
+                }
                 current_degrees[v]--;
-                min_degree_heap.insert({current_degrees[v], v});
+                heap_it[v] = min_degree_heap.insert({current_degrees[v], v}).first;
                 current_edge_count--;
             }
         }
         current_node_count--;
         if (current_node_count > 0) {
             double current_density = (double)current_edge_count / current_node_count;
-            if(current_density > density) {
-                density = current_density;
-                nodes.clear();
-                for (int i = 0; i < n; ++i) {
-                    if (in_h[i]) nodes.push_back(i);
-                }
+            if (current_density > best_density) {
+                best_density = current_density;
+                best_removed_count = removed_count;
             }
         }
+    }
+
+    density = best_density;
+    nodes.clear();
+    nodes.reserve(max(0, n - best_removed_count));
+    for (int v = 0; v < n; ++v) {
+        if (removed_at[v] > best_removed_count) nodes.push_back(v);
     }
 }
 
@@ -141,7 +151,7 @@ void print_output(string filename){
 }
 
 int main(int argc, char* argv[]){
-    inputFile = "testcases/Wiki-Vote.txt";
+    inputFile = "testcases/wiki-Vote.txt";
     outputFile = "stdout";
 
     if (argc == 2){
