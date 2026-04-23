@@ -76,13 +76,13 @@ void algorithm()
     density = 0.0;
     nodes.clear();
 
-    int T = 20; // better iteration count for Greedy++
+    int T = 20; 
 
     vector<int> load(n, 0);
     vector<int> best_nodes;
     double best_density = (double)m / n;
 
-    // initialize best_nodes as all nodes (full graph)
+
     for (int i = 0; i < n; i++)
         best_nodes.push_back(i);
 
@@ -149,7 +149,6 @@ void algorithm()
 
             H[u].clear();
 
-            // Build current node list
             current_nodes.clear();
             for (int i = 0; i < n; i++)
             {
