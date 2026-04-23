@@ -1,7 +1,7 @@
 # Densest Subgraph Algorithms — Makefile
 
 CXX ?= g++
-CXXFLAGS ?= -O2 -std=c++17
+CXXFLAGS ?= -O3 -march=native -flto -funroll-loops
 
 BINARIES := flow1 flow4 greedy greedypp
 
