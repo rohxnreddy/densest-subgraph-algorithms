@@ -17,6 +17,28 @@ vector<vector<int>> adj;
 double density;
 vector<int> nodes;
 
+static void print_progress_bar(long long current, long long total, int width = 40) {
+    if (total <= 0) return;
+    if (current < 0) current = 0;
+    if (current > total) current = total;
+
+    double ratio = (total == 0) ? 1.0 : (double)current / (double)total;
+    int filled = (int)(ratio * width);
+    if (filled < 0) filled = 0;
+    if (filled > width) filled = width;
+
+    cerr << '\r' << '[';
+    for (int i = 0; i < width; ++i) {
+        cerr << (i < filled ? '#' : '-');
+    }
+    int pct = (int)(ratio * 100.0);
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    cerr << "] " << pct << "% (" << current << "/" << total << ')' << flush;
+
+    if (current >= total) cerr << '\n';
+}
+
 //Zero-based indexing for nodes
 void read_input(string filename) {
 
@@ -88,6 +110,9 @@ void algorithm() {
     double best_density = (double)current_edge_count / current_node_count;
     int best_removed_count = 0; // 0 means keep all nodes
 
+    const int total_steps = n;
+    const int update_every = max(1, total_steps / 200); // ~200 updates max
+
     while (!min_degree_heap.empty()) {
         int u = min_degree_heap.begin()->second;
         min_degree_heap.erase(min_degree_heap.begin());
@@ -112,6 +137,10 @@ void algorithm() {
                 best_density = current_density;
                 best_removed_count = removed_count;
             }
+        }
+
+        if (total_steps >= 200 && (removed_count == 1 || removed_count % update_every == 0 || removed_count == total_steps)) {
+            print_progress_bar(removed_count, total_steps);
         }
     }
 
@@ -142,10 +171,11 @@ void print_output(string filename){
     fprintf(file, "Density: %.6f\n", density);
     fprintf(file, "Number of nodes: %d\n", (int)nodes.size());
 
-    fprintf(file, "Nodes:\n");
+    fprintf(file, "Nodes: ");
     for (int v : nodes) {
-        fprintf(file, "%d\n", v);
+        fprintf(file, " %d ,", v);
     }
+    fprintf(file, "\n");
 
     if (file != stdout) fclose(file);
 }

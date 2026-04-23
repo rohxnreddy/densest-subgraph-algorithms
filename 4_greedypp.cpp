@@ -17,6 +17,38 @@ vector<vector<int>> adj;
 double density;
 vector<int> nodes;
 
+static void print_progress_bar(long long current, long long total, int width = 40)
+{
+    if (total <= 0)
+        return;
+    if (current < 0)
+        current = 0;
+    if (current > total)
+        current = total;
+
+    double ratio = (total == 0) ? 1.0 : (double)current / (double)total;
+    int filled = (int)(ratio * width);
+    if (filled < 0)
+        filled = 0;
+    if (filled > width)
+        filled = width;
+
+    cerr << '\r' << '[';
+    for (int i = 0; i < width; ++i)
+    {
+        cerr << (i < filled ? '#' : '-');
+    }
+    int pct = (int)(ratio * 100.0);
+    if (pct < 0)
+        pct = 0;
+    if (pct > 100)
+        pct = 100;
+    cerr << "] " << pct << "% (" << current << "/" << total << ')' << flush;
+
+    if (current >= total)
+        cerr << '\n';
+}
+
 // Zero-based indexing for nodes
 void read_input(string filename)
 {
@@ -86,6 +118,10 @@ void algorithm()
     for (int i = 0; i < n; i++)
         best_nodes.push_back(i);
 
+    const long long total_steps = (long long)T * (long long)n;
+    const long long update_every = max(1LL, total_steps / 200); // ~200 updates max
+    long long completed_steps = 0;
+
     for (int iter = 0; iter < T; iter++)
     {
 
@@ -135,6 +171,7 @@ void algorithm()
             // Remove u
             alive[u] = false;
             remaining_nodes--;
+            completed_steps++;
 
             for (int v : H[u])
             {
@@ -173,6 +210,11 @@ void algorithm()
                     best_nodes = current_nodes;
                 }
             }
+
+            if (total_steps >= 200 && (completed_steps == 1 || completed_steps % update_every == 0 || completed_steps == total_steps))
+            {
+                print_progress_bar(completed_steps, total_steps);
+            }
         }
     }
 
@@ -204,11 +246,11 @@ void print_output(string filename)
     fprintf(file, "Density: %.6f\n", density);
     fprintf(file, "Number of nodes: %d\n", (int)nodes.size());
 
-    fprintf(file, "Nodes:\n");
-    for (int v : nodes)
-    {
-        fprintf(file, "%d\n", v);
+    fprintf(file, "Nodes: ");
+    for (int v : nodes) {
+        fprintf(file, " %d ,", v);
     }
+    fprintf(file, "\n");
 
     if (file != stdout)
         fclose(file);

@@ -35,12 +35,14 @@ run_one() {
 	local input_file="$3"
 	local output_file="$4"
 	local elapsed
+	local start
 
 	echo "Running $algo_name on $input_file..."
-	echo "========== $algo_name ==========" >> "$output_file"
-	elapsed=$( { TIMEFORMAT='%3R'; time "./$exe" "$input_file" >> "$output_file"; } 2>&1 )
-	elapsed="${elapsed//$'\n'/}"
-	echo -e "    Completed in ${elapsed}s"
+	start=$SECONDS
+	"./$exe" "$input_file" >> "$output_file"
+	elapsed=$((SECONDS - start))
+	echo -e "    Completed in ${elapsed}s \n"
+	echo -e "Time: ${elapsed}s \n" >> 	"$output_file"
 	echo "" >> "$output_file"
 }
 
@@ -51,9 +53,7 @@ for input_file in "${INPUT_FILES[@]}"; do
 	output_file="outputs/${base_name}_output.txt"
 
 	> "$output_file"
-	echo "########################################" >> "$output_file"
 	echo "Testcase: $input_file" >> "$output_file"
-	echo "########################################" >> "$output_file"
 	echo "" >> "$output_file"
 
 	run_one "Flow Algo-1" "flow1" "$input_file" "$output_file"

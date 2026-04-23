@@ -1376,8 +1376,3 @@ Nodes:
 278466
 
 ========== Greedy++ ==========
-Algorithm: Greedy++
-Density: 0.000000
-Number of nodes: 0
-Nodes:
-
