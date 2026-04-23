@@ -108,12 +108,11 @@ void algorithm()
     density = 0.0;
     nodes.clear();
 
-    int T = 20; //100
+    int T = 5; //20 or 50
 
     vector<int> load(n, 0);
     vector<int> best_nodes;
-    double best_density = (double)m / n;
-
+    double best_density = n > 0 ? (double)m / n : 0.0;
 
     for (int i = 0; i < n; i++)
         best_nodes.push_back(i);
@@ -122,98 +121,148 @@ void algorithm()
     const long long update_every = max(1LL, total_steps / 200); // ~200 updates max
     long long completed_steps = 0;
 
+    // Pre-allocate structures outside the loop to avoid redundant allocations
+    vector<bool> alive(n);
+    vector<int> degree(n);
+    vector<int> key(n);
+    vector<int> removal_order;
+    removal_order.reserve(n);
+
+    // Doubly linked list for O(1) bucket sort
+    vector<int> head;
+    vector<int> prev_node(n);
+    vector<int> next_node(n);
+
     for (int iter = 0; iter < T; iter++)
     {
+        int remaining_nodes = n;
+        int remaining_edges = m;
+        removal_order.clear();
 
-        // Copy graph state
-        vector<set<int>> H(n);
-        vector<bool> alive(n, true);
-
+        int iter_max_key = 0;
         for (int u = 0; u < n; u++)
         {
-            for (int v : adj[u])
+            alive[u] = true;
+            degree[u] = adj[u].size();
+            key[u] = load[u] + degree[u];
+            if (key[u] > iter_max_key)
             {
-                H[u].insert(v);
+                iter_max_key = key[u];
             }
         }
 
-        int remaining_nodes = n;
-        int remaining_edges = m;
+        if (head.size() <= iter_max_key)
+        {
+            head.resize(iter_max_key + 1, -1);
+        }
+        
+        // Clear only the used portion of the bucket array
+        fill(head.begin(), head.begin() + iter_max_key + 1, -1);
 
-        // Min heap: (load + degree, node)
-        using pii = pair<int, int>;
-        priority_queue<pii, vector<pii>, greater<pii>> pq;
-
-        vector<int> degree(n, 0);
         for (int u = 0; u < n; u++)
         {
-            degree[u] = H[u].size();
-            pq.push({load[u] + degree[u], u});
+            int k = key[u];
+            next_node[u] = head[k];
+            if (head[k] != -1)
+            {
+                prev_node[head[k]] = u;
+            }
+            head[k] = u;
+            prev_node[u] = -1;
         }
 
-        vector<int> current_nodes;
-        for (int i = 0; i < n; i++)
-            current_nodes.push_back(i);
+        int min_key = 0;
+        double iter_best_density = -1.0;
+        int iter_best_step = -1;
 
-        while (!pq.empty() && remaining_nodes > 0)
+        while (remaining_nodes > 0)
         {
-            auto [val, u] = pq.top();
-            pq.pop();
+            // Find the minimum non-empty bucket
+            while (min_key <= iter_max_key && head[min_key] == -1)
+            {
+                min_key++;
+            }
+            
+            int u = head[min_key];
+            
+            // Pop u from the doubly linked list
+            head[min_key] = next_node[u];
+            if (head[min_key] != -1)
+            {
+                prev_node[head[min_key]] = -1;
+            }
 
-            if (!alive[u])
-                continue;
-            if (val != load[u] + degree[u])
-                continue;
-
-            // Update load
-            load[u] += degree[u];
-
-            // Remove u
             alive[u] = false;
+            load[u] += degree[u];
+            removal_order.push_back(u);
             remaining_nodes--;
             completed_steps++;
 
-            for (int v : H[u])
+            for (int v : adj[u])
             {
                 if (alive[v])
                 {
-                    H[v].erase(u);
                     remaining_edges--;
+                    
+                    int k = key[v];
+                    // Remove v from its current bucket
+                    if (prev_node[v] != -1)
+                    {
+                        next_node[prev_node[v]] = next_node[v];
+                    }
+                    else
+                    {
+                        head[k] = next_node[v];
+                    }
+                    if (next_node[v] != -1)
+                    {
+                        prev_node[next_node[v]] = prev_node[v];
+                    }
+
+                    key[v]--;
+                    k--;
                     degree[v]--;
-                    pq.push({load[v] + degree[v], v});
+
+                    // Insert v into the new bucket
+                    next_node[v] = head[k];
+                    if (head[k] != -1)
+                    {
+                        prev_node[head[k]] = v;
+                    }
+                    head[k] = v;
+                    prev_node[v] = -1;
+
+                    // Update min_key if needed
+                    if (k < min_key)
+                    {
+                        min_key = k;
+                    }
                 }
-            }
-
-            H[u].clear();
-
-            current_nodes.clear();
-            for (int i = 0; i < n; i++)
-            {
-                if (alive[i])
-                    current_nodes.push_back(i);
             }
 
             if (remaining_nodes > 0)
             {
-                int edge_count = 0;
-                for (int i = 0; i < n; i++)
+                double curr_density = (double)remaining_edges / remaining_nodes;
+                if (curr_density > iter_best_density)
                 {
-                    if (alive[i])
-                        edge_count += degree[i];
-                }
-                edge_count /= 2;
-
-                double curr_density = (double)edge_count / remaining_nodes;
-                if (curr_density > best_density)
-                {
-                    best_density = curr_density;
-                    best_nodes = current_nodes;
+                    iter_best_density = curr_density;
+                    iter_best_step = removal_order.size();
                 }
             }
 
             if (total_steps >= 200 && (completed_steps == 1 || completed_steps % update_every == 0 || completed_steps == total_steps))
             {
                 print_progress_bar(completed_steps, total_steps);
+            }
+        }
+
+        if (iter_best_density > best_density)
+        {
+            best_density = iter_best_density;
+            best_nodes.clear();
+            if (iter_best_step != -1)
+            {
+                best_nodes.insert(best_nodes.end(), removal_order.begin() + iter_best_step, removal_order.end());
             }
         }
     }
