@@ -1,75 +1,74 @@
-#include <iostream>
-#include <vector>
-#include <queue>
-#include <stack>
-#include <limits>
-#include <cstring>
 #include <algorithm>
-#include <set>
+#include <cstring>
+#include <iostream>
+#include <limits>
 #include <cmath>
-#include <fstream>
-#include <sstream>
+#include <vector>
+#include <cstdio>
 
 using namespace std;
 
 // Global variables to store graph and results
 string inputFile, outputFile;
 int n, m;
-vector<vector<int>> adj;
-double density = 0.0;
-vector<int> nodes;
+double max_density = 0.0;
+vector<int> densest_nodes;
+
+struct EdgeInfo {
+    int to;
+    int id;
+};
+vector<vector<EdgeInfo>> adj_id;
+vector<pair<int, int>> edge_list;
+
+// --- Ultra-Fast I/O Parsing from Buffer ---
+inline bool parse_two_ints(char*& ptr, int& u, int& v) {
+    while (*ptr && isspace(*ptr)) ++ptr;
+    if (!*ptr) return false;
+
+    u = 0;
+    while (*ptr >= '0' && *ptr <= '9') u = u * 10 + (*ptr++ - '0');
+
+    while (*ptr && isspace(*ptr)) ++ptr;
+    if (!*ptr) return false;
+
+    v = 0;
+    while (*ptr >= '0' && *ptr <= '9') v = v * 10 + (*ptr++ - '0');
+
+    return true;
+}
 
 // --- Max Flow (Dinic's Algorithm) Implementation ---
 struct Edge {
     int to;
+    int rev;
     double capacity;
     double flow;
-    int rev;
 };
 
 vector<vector<Edge>> flow_adj;
 vector<int> level_arr;
 vector<int> ptr_arr;
-
-static void print_progress_bar(long long current, long long total, int width = 40) {
-    if (total <= 0) return;
-    if (current < 0) current = 0;
-    if (current > total) current = total;
-
-    double ratio = (total == 0) ? 1.0 : (double)current / (double)total;
-    int filled = (int)(ratio * width);
-    if (filled < 0) filled = 0;
-    if (filled > width) filled = width;
-
-    cerr << '\r' << '[';
-    for (int i = 0; i < width; ++i) {
-        cerr << (i < filled ? '#' : '-');
-    }
-    int pct = (int)(ratio * 100.0);
-    if (pct < 0) pct = 0;
-    if (pct > 100) pct = 100;
-    cerr << "] " << pct << "% (" << current << "/" << total << ')' << flush;
-
-    if (current >= total) cerr << '\n';
-}
+vector<int> flat_q;
 
 void add_flow_edge(int from, int to, double cap) {
-    flow_adj[from].push_back({to, cap, 0, (int)flow_adj[to].size()});
-    flow_adj[to].push_back({from, 0, 0, (int)flow_adj[from].size() - 1});
+    flow_adj[from].push_back({to, (int)flow_adj[to].size(), cap, 0});
+    flow_adj[to].push_back({from, (int)flow_adj[from].size() - 1, 0, 0});
 }
 
-bool bfs(int s, int t) {
-    fill(level_arr.begin(), level_arr.end(), -1);
+bool bfs(int s, int t, int T_node) {
+    fill(level_arr.begin(), level_arr.begin() + T_node + 1, -1);
     level_arr[s] = 0;
-    queue<int> q;
-    q.push(s);
-    while (!q.empty()) {
-        int v = q.front();
-        q.pop();
+
+    int head = 0, tail = 0;
+    flat_q[tail++] = s;
+
+    while (head < tail) {
+        int v = flat_q[head++];
         for (auto &edge : flow_adj[v]) {
             if (edge.capacity - edge.flow > 1e-9 && level_arr[edge.to] == -1) {
                 level_arr[edge.to] = level_arr[v] + 1;
-                q.push(edge.to);
+                flat_q[tail++] = edge.to;
             }
         }
     }
@@ -78,7 +77,7 @@ bool bfs(int s, int t) {
 
 double dfs(int v, int t, double pushed) {
     if (pushed == 0 || v == t) return pushed;
-    for (int &cid = ptr_arr[v]; cid < flow_adj[v].size(); ++cid) {
+    for (int &cid = ptr_arr[v]; cid < (int)flow_adj[v].size(); ++cid) {
         auto &edge = flow_adj[v][cid];
         int tr = edge.to;
         if (level_arr[v] + 1 != level_arr[tr] || edge.capacity - edge.flow < 1e-9)
@@ -92,10 +91,10 @@ double dfs(int v, int t, double pushed) {
     return 0;
 }
 
-double dinic(int s, int t) {
+double dinic(int s, int t, int T_node) {
     double flow = 0;
-    while (bfs(s, t)) {
-        fill(ptr_arr.begin(), ptr_arr.end(), 0);
+    while (bfs(s, t, T_node)) {
+        fill(ptr_arr.begin(), ptr_arr.begin() + T_node + 1, 0);
         while (double pushed = dfs(s, t, numeric_limits<double>::infinity())) {
             flow += pushed;
         }
@@ -103,158 +102,244 @@ double dinic(int s, int t) {
     return flow;
 }
 
-struct Triangle {
-    int u, v, w;
+struct SinkEdgeRef {
+    int u;
+    int idx;
 };
 
 void algorithm() {
-    if (n == 0) return;
+    if (n == 0 || m == 0) return;
 
-    // 1. Find all triangles
-    vector<Triangle> triangles;
-    if (n > 0) {
-        vector<int> mark(n, 0);
-        int stamp = 1;
-        for (int u_node = 0; u_node < n; ++u_node) {
-            for (int v : adj[u_node]) mark[v] = stamp;
-            for (int v_node : adj[u_node]) {
-                if (v_node <= u_node) continue;
-                for (int w_node : adj[v_node]) {
-                    if (w_node <= v_node) continue;
-                    if (mark[w_node] == stamp) {
-                        triangles.push_back({u_node, v_node, w_node});
-                    }
+    int S_node = 0;
+    // Nodes: S (1) + Vertices (n) + Edges (m) + T (1)
+    int T_node = n + m + 1;
+    int max_nodes = T_node + 1;
+
+    flow_adj.resize(max_nodes);
+    level_arr.resize(max_nodes);
+    ptr_arr.resize(max_nodes);
+    flat_q.resize(max_nodes);
+
+    vector<int> t_count(n, 0);
+
+    // 1. Find Triangles and Build V -> Lambda edges
+    for (int u = 0; u < n; ++u) {
+        for (auto& edge1 : adj_id[u]) {
+            int v = edge1.to;
+            int e_uv = edge1.id;
+            if (v <= u) continue;
+
+            for (auto& edge2 : adj_id[v]) {
+                int w = edge2.to;
+                int e_vw = edge2.id;
+                if (w <= v) continue;
+
+                // Binary search for w in u's neighborhood
+                auto it = lower_bound(adj_id[u].begin(), adj_id[u].end(), w,
+                    [](const EdgeInfo& e, int val) { return e.to < val; });
+
+                if (it != adj_id[u].end() && it->to == w) {
+                    int e_uw = it->id;
+
+                    t_count[u]++;
+                    t_count[v]++;
+                    t_count[w]++;
+
+                    // Add an edge v -> \psi with capacity 1
+                    add_flow_edge(w + 1, e_uv + n + 1, 1.0);
+                    add_flow_edge(u + 1, e_vw + n + 1, 1.0);
+                    add_flow_edge(v + 1, e_uw + n + 1, 1.0);
                 }
-            }
-            ++stamp;
-            if (stamp == 0x3fffffff) {
-                fill(mark.begin(), mark.end(), 0);
-                stamp = 1;
             }
         }
     }
 
-    double l = 0, u = triangles.size();
-    double EPS = 1.0 / (1.0 * n * (n + 1));
+    int max_degree = 0;
+    for (int i = 0; i < n; ++i) {
+        if (t_count[i] > max_degree) max_degree = t_count[i];
+    }
 
-    // Calculate total iterations for progress bar
-    // Since it's binary search: log2((u-l)/EPS)
-    int total_iters = (u <= l) ? 1 : (int)ceil(log2((u - l) / EPS));
-    int current_iter = 0;
-    int update_every = max(1, total_iters / 20); // Update every 5%
+    if (max_degree == 0) return; // No motifs found
 
-    while (u - l > EPS) {
-        current_iter++;
-        double alpha = (l + u) / 2.0;
-        int S_node = 0;
-        int T_node = triangles.size() + n + 1;
+    // 2. Add Source -> V edges
+    for (int i = 0; i < n; ++i) {
+        if (t_count[i] > 0) {
+            add_flow_edge(S_node, i + 1, t_count[i]);
+        }
+    }
 
-        flow_adj.assign(T_node + 1, vector<Edge>());
-        level_arr.assign(T_node + 1, -1);
-        ptr_arr.assign(T_node + 1, 0);
+    // 3. Add Lambda -> V edges (capacity +infinity)
+    for (int i = 0; i < m; ++i) {
+        int e_node = i + n + 1;
+        int u_node = edge_list[i].first + 1;
+        int v_node = edge_list[i].second + 1;
+        add_flow_edge(e_node, u_node, 1e15);
+        add_flow_edge(e_node, v_node, 1e15);
+    }
 
-        for (int i = 0; i < (int)triangles.size(); ++i) {
-            add_flow_edge(S_node, i + 1, 1.0);
-            add_flow_edge(i + 1, triangles[i].u + (int)triangles.size() + 1, 1e15);
-            add_flow_edge(i + 1, triangles[i].v + (int)triangles.size() + 1, 1e15);
-            add_flow_edge(i + 1, triangles[i].w + (int)triangles.size() + 1, 1e15);
+    // 4. Add V -> Sink edges
+    vector<SinkEdgeRef> sink_edges;
+    sink_edges.reserve(n);
+    for (int i = 0; i < n; ++i) {
+        if (t_count[i] > 0) {
+            int v_node = i + 1;
+            add_flow_edge(v_node, T_node, 0.0); // Temporary capacity
+            sink_edges.push_back({v_node, (int)flow_adj[v_node].size() - 1});
+        }
+    }
+
+    // Binary Search Initialization
+    double l = 0;
+    double u_bound = max_degree;
+    double EPS = 1.0 / ((double)n * (n - 1));
+
+    int max_iters = 1;
+    if (u_bound - l >= EPS) {
+        max_iters = (int)ceil(log2((u_bound - l) / EPS)) + 1;
+    }
+    const int bar_width = 40;
+
+    // Hard cap at 60 to prevent max_iters from getting absurdly high
+    if (max_iters > 60) max_iters = 60;
+
+    int iter = 1;
+    for (; iter <= max_iters; ++iter) {
+        double alpha = (l + u_bound) / 2.0;
+
+        // Failsafe: break instantly if floating-point precision stagnates
+        if (alpha == l || alpha == u_bound) break;
+
+        // Reset flows
+        for (int i = 0; i <= T_node; ++i) {
+            for (auto &edge : flow_adj[i]) edge.flow = 0;
         }
 
-        for (int i = 0; i < n; ++i) {
-            add_flow_edge(i + (int)triangles.size() + 1, T_node, alpha);
+        // Update capacities for V -> Sink. For 3-cliques, |V_psi| = 3.
+        for (const auto &ref : sink_edges) {
+            flow_adj[ref.u][ref.idx].capacity = 3.0 * alpha;
         }
 
-        dinic(S_node, T_node);
+        dinic(S_node, T_node, T_node);
 
+        // Extract minimum st-cut reachable from S
         vector<int> current_S;
         vector<char> visited(T_node + 1, 0);
-        queue<int> q;
-        q.push(S_node);
+
+        int head = 0, tail = 0;
+        flat_q[tail++] = S_node;
         visited[S_node] = 1;
 
-        while (!q.empty()) {
-            int curr = q.front();
-            q.pop();
-            if (curr > (int)triangles.size() && curr < T_node) {
-                current_S.push_back(curr - (int)triangles.size() - 1);
+        while (head < tail) {
+            int curr = flat_q[head++];
+            if (curr > 0 && curr <= n) {
+                current_S.push_back(curr - 1);
             }
             for (auto &edge : flow_adj[curr]) {
                 if (edge.capacity - edge.flow > 1e-9 && !visited[edge.to]) {
-                    visited[edge.to] = true;
-                    q.push(edge.to);
+                    visited[edge.to] = 1;
+                    flat_q[tail++] = edge.to;
                 }
             }
         }
 
         if (!current_S.empty()) {
             l = alpha;
-            density = alpha;
-            nodes = current_S;
+            max_density = alpha;
+            densest_nodes = current_S;
         } else {
-            u = alpha;
+            u_bound = alpha;
         }
 
-        // Fixed progress bar call
-        if (current_iter == 1 || current_iter % update_every == 0 || u - l <= EPS) {
-            print_progress_bar(current_iter, total_iters);
-        }
+        // Render progress
+        double frac = (double)iter / (double)max_iters;
+        if (frac < 0.0) frac = 0.0;
+        if (frac > 1.0) frac = 1.0;
+        int pos = (int)round(frac * bar_width);
+
+        cerr << '\r' << "[";
+        for (int i = 0; i < bar_width; ++i) cerr << (i < pos ? '#' : '-');
+        cerr << "] " << (int)round(frac * 100.0) << "% (" << iter << "/" << max_iters << ")" << flush;
     }
+
+    // Correctly format the final progress bar line
+    int final_iters = iter > max_iters ? max_iters : iter - 1;
+    cerr << '\r' << "[";
+    for (int i = 0; i < bar_width; ++i) cerr << '#';
+    cerr << "] 100% (" << final_iters << "/" << max_iters << ")" << flush << '\n';
 }
 
 void read_input(string filename) {
-
-    ifstream file(filename);
-    if (!file.is_open()) {
-        cout << "Error opening file\n";
+    FILE* file = fopen(filename.c_str(), "rb");
+    if (!file) {
+        perror("Error opening file");
         exit(1);
     }
 
-    string line;
-    bool header_read = false;
-    set<pair<int,int>> edges;
-    int max_node = -1;
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    rewind(file);
 
-    while (getline(file, line)) {
-        if (line.empty() || line[0] == '#' || line[0] == '%') continue;
+    vector<char> buffer(fileSize + 1);
+    if (fread(buffer.data(), 1, fileSize, file) != (size_t)fileSize) {
+        // Read fallback handling if needed
+    }
+    buffer[fileSize] = '\0';
+    fclose(file);
 
-        stringstream ss(line);
-        int u, v;
-        if (ss >> u >> v) {
-            if (!header_read) {
-                n = u;
-                m = v;
-                header_read = true;
-            } else {
-                if (u == v) continue;
-                int a = min(u, v);
-                int b = max(u, v);
-                edges.insert({a, b});
-                max_node = max({max_node, a, b});
+    char* ptr = buffer.data();
+    int u, v;
+    int maxNode = -1;
+    vector<pair<int,int>> edges;
+
+    while (*ptr) {
+        if (*ptr == '#') {
+            while (*ptr && *ptr != '\n') ++ptr;
+            continue;
+        }
+
+        if (!isspace(*ptr) && *ptr >= '0' && *ptr <= '9') {
+            if (parse_two_ints(ptr, u, v)) {
+                if (u != v) {
+                    int a = min(u, v);
+                    int b = max(u, v);
+                    edges.emplace_back(a, b);
+                    if (a > maxNode) maxNode = a;
+                    if (b > maxNode) maxNode = b;
+                }
             }
+        } else {
+            ++ptr;
         }
     }
 
-    file.close();
-
-    if (!header_read) {
-        cout << "Invalid input format\n";
-        exit(1);
+    n = maxNode + 1;
+    if (n <= 0) {
+        adj_id.clear();
+        return;
     }
 
-    // In case the file didn't have an explicit n, m header and the first line was actually an edge
-    n = max(n, max_node + 1);
+    sort(edges.begin(), edges.end());
+    edges.erase(unique(edges.begin(), edges.end()), edges.end());
+
     m = edges.size();
+    edge_list = edges;
+    adj_id.assign(n, vector<EdgeInfo>());
 
-    adj.assign(n, vector<int>());
+    for (int i = 0; i < m; ++i) {
+        int eu = edges[i].first;
+        int ev = edges[i].second;
+        adj_id[eu].push_back({ev, i});
+        adj_id[ev].push_back({eu, i});
+    }
 
-    for (auto &e : edges) {
-        adj[e.first].push_back(e.second);
-        adj[e.second].push_back(e.first);
+    for (int i = 0; i < n; ++i) {
+        sort(adj_id[i].begin(), adj_id[i].end(), [](const EdgeInfo& a, const EdgeInfo& b){
+            return a.to < b.to;
+        });
     }
 }
 
-
-void print_output(string filename){
+void print_output2(string filename){
     FILE* file;
 
     if (filename == "stdout") {
@@ -267,14 +352,14 @@ void print_output(string filename){
         }
     }
 
-    sort(nodes.begin(), nodes.end());
+    sort(densest_nodes.begin(), densest_nodes.end());
 
-    fprintf(file, "Algorithm: Exact\n");
-    fprintf(file, "Density: %.6f\n", density);
-    fprintf(file, "Number of nodes: %d\n", (int)nodes.size());
+    fprintf(file, "Algorithm: Exact (h=3)\n");
+    fprintf(file, "Density: %.6f\n", max_density);
+    fprintf(file, "Number of nodes: %d\n", (int)densest_nodes.size());
 
     fprintf(file, "Nodes: ");
-    for (int v : nodes) {
+    for (int v : densest_nodes) {
         fprintf(file, " %d ,", v);
     }
     fprintf(file, "\n");
@@ -282,26 +367,16 @@ void print_output(string filename){
     if (file != stdout) fclose(file);
 }
 
-int main(int argc, char* argv[]){
-    inputFile = "testcases/wiki-Vote.txt";
+int main(int argc, char *argv[]) {
+    inputFile = "testcases/Wiki-Vote.txt";
     outputFile = "stdout";
 
-    if (argc == 2){
-        inputFile = argv[1];
-    }
-
-    if (argc == 3){
-        inputFile = argv[1];
-        outputFile = argv[2];
-    }
-
-    system("mkdir -p outputs");
+    if (argc >= 2) inputFile = argv[1];
+    if (argc >= 3) outputFile = argv[2];
 
     read_input(inputFile);
-
     algorithm();
-
-    print_output(outputFile);
+    print_output2(outputFile);
 
     return 0;
 }
