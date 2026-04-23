@@ -76,7 +76,7 @@ void algorithm()
     density = 0.0;
     nodes.clear();
 
-    int T = 20; 
+    int T = 50; //100
 
     vector<int> load(n, 0);
     vector<int> best_nodes;
