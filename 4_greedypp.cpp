@@ -155,7 +155,7 @@ void algorithm()
         {
             head.resize(iter_max_key + 1, -1);
         }
-        
+
         // Clear only the used portion of the bucket array
         fill(head.begin(), head.begin() + iter_max_key + 1, -1);
 
@@ -182,9 +182,9 @@ void algorithm()
             {
                 min_key++;
             }
-            
+
             int u = head[min_key];
-            
+
             // Pop u from the doubly linked list
             head[min_key] = next_node[u];
             if (head[min_key] != -1)
@@ -203,7 +203,7 @@ void algorithm()
                 if (alive[v])
                 {
                     remaining_edges--;
-                    
+
                     int k = key[v];
                     // Remove v from its current bucket
                     if (prev_node[v] != -1)
@@ -291,9 +291,25 @@ void print_output(string filename)
 
     sort(nodes.begin(), nodes.end());
 
+    // --- Add this block to count internal edges ---
+    long long internal_edges = 0;
+    vector<bool> in_subgraph(n, false);
+    for (int v : nodes) in_subgraph[v] = true;
+
+    for (int u : nodes) {
+        for (int v : adj[u]) {
+            if (in_subgraph[v]) {
+                internal_edges++;
+            }
+        }
+    }
+    internal_edges /= 2;
+    // ----------------------------------------------
+
     fprintf(file, "Algorithm: Greedy++\n");
     fprintf(file, "Density: %.6f\n", density);
     fprintf(file, "Number of nodes: %d\n", (int)nodes.size());
+    fprintf(file, "Number of edges: %lld\n", internal_edges); // New Line
 
     fprintf(file, "Nodes: ");
     for (int v : nodes) {

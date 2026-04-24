@@ -67,7 +67,7 @@ void read_input(string filename) {
                 m = v;
                 header_read = true;
             } else {
-                if (u == v) continue; 
+                if (u == v) continue;
                 int a = min(u, v);
                 int b = max(u, v);
                 edges.insert({a, b});
@@ -408,7 +408,7 @@ void algorithm() {
             }
 
             double alpha = (l + u) / 2.0;
-            
+
             // source = 0, node layer = 1..num_nodes, edge layer = num_nodes+1..num_nodes+num_edges, sink = end
             int s = 0, t = num_nodes + num_edges + 1;
             Dinic dinic(t + 1);
@@ -446,14 +446,14 @@ void algorithm() {
             } else {
                 l = alpha;
                 global_l = max(global_l, alpha);
-                
+
                 vector<int> U;
                 for (int id : S) {
                     if (id > 0 && id <= num_nodes) {
                         U.push_back(curr_C[id - 1]);
                     }
                 }
-                
+
                 double curr_rho = density_of(U);
                 if (curr_rho > density) {
                     density = curr_rho;
@@ -479,9 +479,25 @@ void print_output(string filename){
 
     sort(nodes.begin(), nodes.end());
 
-    fprintf(file, "Algorithm: CoreExact\n");
+    // --- Add this block to count internal edges ---
+    long long internal_edges = 0;
+    vector<bool> in_subgraph(n, false);
+    for (int v : nodes) in_subgraph[v] = true;
+
+    for (int u : nodes) {
+        for (int v : adj[u]) {
+            if (in_subgraph[v]) {
+                internal_edges++;
+            }
+        }
+    }
+    internal_edges /= 2;
+    // ----------------------------------------------
+
+    fprintf(file, "Algorithm: CoreExact (h=3)\n");
     fprintf(file, "Density: %.6f\n", density);
     fprintf(file, "Number of nodes: %d\n", (int)nodes.size());
+    fprintf(file, "Number of edges: %lld\n", internal_edges); // New Line
 
     fprintf(file, "Nodes: ");
     for (int v : nodes) {

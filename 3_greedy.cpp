@@ -167,9 +167,25 @@ void print_output(string filename){
 
     sort(nodes.begin(), nodes.end());
 
-    fprintf(file, "Algorithm: Greedy \n");
+    // --- Add this block to count internal edges ---
+    long long internal_edges = 0;
+    vector<bool> in_subgraph(n, false);
+    for (int v : nodes) in_subgraph[v] = true;
+
+    for (int u : nodes) {
+        for (int v : adj[u]) {
+            if (in_subgraph[v]) {
+                internal_edges++;
+            }
+        }
+    }
+    internal_edges /= 2;
+    // ----------------------------------------------
+
+    fprintf(file, "Algorithm: Greedy\n");
     fprintf(file, "Density: %.6f\n", density);
     fprintf(file, "Number of nodes: %d\n", (int)nodes.size());
+    fprintf(file, "Number of edges: %lld\n", internal_edges); // New Line
 
     fprintf(file, "Nodes: ");
     for (int v : nodes) {

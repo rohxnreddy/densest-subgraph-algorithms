@@ -339,7 +339,7 @@ void read_input(string filename) {
     }
 }
 
-void print_output2(string filename){
+void print_output(string filename){
     FILE* file;
 
     if (filename == "stdout") {
@@ -354,9 +354,23 @@ void print_output2(string filename){
 
     sort(densest_nodes.begin(), densest_nodes.end());
 
+    long long internal_edges = 0;
+    vector<bool> in_subgraph(n, false);
+    for (int v : densest_nodes) in_subgraph[v] = true;
+
+    for (int u : densest_nodes) {
+        for (auto& edge : adj_id[u]) {
+            if (in_subgraph[edge.to]) {
+                internal_edges++;
+            }
+        }
+    }
+    internal_edges /= 2;
+
     fprintf(file, "Algorithm: Exact (h=3)\n");
     fprintf(file, "Density: %.6f\n", max_density);
     fprintf(file, "Number of nodes: %d\n", (int)densest_nodes.size());
+    fprintf(file, "Number of edges: %lld\n", internal_edges);
 
     fprintf(file, "Nodes: ");
     for (int v : densest_nodes) {
@@ -376,7 +390,7 @@ int main(int argc, char *argv[]) {
 
     read_input(inputFile);
     algorithm();
-    print_output2(outputFile);
+    print_output(outputFile);
 
     return 0;
 }
