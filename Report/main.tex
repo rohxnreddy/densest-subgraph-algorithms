@@ -1,0 +1,453 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{titlesec}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{titling}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{makecell} 
+\usepackage{enumitem}
+\usepackage{tfrupee}
+\usepackage{tabularx}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{dirtree}
+
+
+% \usepackage{hyperref}
+\usepackage{array}
+\usepackage{geometry}
+% Set page geometry
+\geometry{
+  a4paper,
+  left=3.5cm,
+  right=3.5cm,
+  top=2.5cm,
+  bottom=2.5cm
+}
+\usepackage{titlesec}  % Ensure you include the titlesec package
+% Format section headings
+\titleformat{\section}
+  {\normalfont\Large\bfseries}{\thesection}{1em}{}  % Large & Bold
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}{\thesubsection}{1em}{}  % Slightly smaller
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}  % Normal size & Bold
+% Adjust spacing if needed
+\titlespacing*{\section}{0pt}{12pt plus 4pt minus 2pt}{6pt plus 2pt minus 2pt}
+\titlespacing*{\subsection}{0pt}{10pt plus 4pt minus 2pt}{4pt plus 2pt minus 2pt}
+\titlespacing*{\subsubsection}{0pt}{8pt plus 2pt minus 2pt}{4pt plus 2pt minus 2pt}
+\renewcommand{\cftsecfont}{\bfseries}
+\renewcommand{\cftsubsecfont}{\bfseries}
+
+
+\begin{document}
+
+% Title page
+\begin{titlepage}
+\centering
+{\fontsize{40}{48}\selectfont \textbf{A Project Report for Design and Analysis of Algorithms}}\\[1cm]
+% BITS Pilani Logo - you'll need to add the actual logo file
+\includegraphics[width=0.4\textwidth]{bits_logo.png}\\[1cm]
+{\Large Birla Institute Of Technology and Science Pilani\\
+Hyderabad Campus}\\[1cm]
+{\Large \textbf{Design and Analysis of Algorithms \\(CS F364)}}\\[0.5cm]
+{\large Under the supervision of\\
+\textbf{Prof. Apurba Das  \& Prof. Tathagata Ray}}\\[1.5cm]
+{\large Submitted By: \textbf{Group 28}}\\[1cm]
+
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Sr No.} & \textbf{Name} & \textbf{ID Number} \\
+\hline
+1 & AKSHITH VUPPALA & 2023A7PS0032H \\
+\hline
+2 & ROHAN REDDY DEVARAPALLI & 2023A7PS0138H \\
+\hline
+3 & ADITHYA NAMA & 2023A7PS0171H \\
+\hline
+4 & VENU SAI YELESVARAPU & 2023A7PS0149H \\
+\hline
+5 & SATVIK ADERLA & 2023A7PS0167H \\
+\hline
+\end{tabular}
+
+\end{titlepage}
+
+\section*{Individual Contribution}
+
+\noindent\textbf{AKSHITH VUPPALA (2023A7PS0032H)}
+\begin{itemize}
+    \item Implemented Algorithm 1 (Exact) from the \textit{Efficient Algorithms for Densest Subgraph Discovery} paper.
+\end{itemize}
+
+\noindent\textbf{ROHAN REDDY DEVARAPALLI (2023A7PS0138H)}
+\begin{itemize}
+    \item Implemented Algorithm 1 (GREEDY) from the \textit{Flowless} paper.
+\end{itemize}
+
+\noindent\textbf{ADITHYA NAMA (2023A7PS0171H)}
+\begin{itemize}
+    \item Managed input parsing and output formatting, and contributed to the preparation of the project report.
+\end{itemize}
+
+\noindent\textbf{VENU SAI YELESVARAPU (2023A7PS0149H)}
+\begin{itemize}
+    \item Implemented Algorithm 4 (CoreExact) from the \textit{Efficient Algorithms for Densest Subgraph Discovery} paper.
+\end{itemize}
+
+\noindent\textbf{SATVIK ADERLA (2023A7PS0167H)}
+\begin{itemize}
+    \item Implemented Algorithm 2 (GREEDY++) from the \textit{Flowless} paper.
+\end{itemize}
+
+\pagebreak
+
+\tableofcontents 
+\pagebreak
+\section{Introduction}
+
+Finding the densest subgraph involves a strict trade-off between mathematical optimality and computational feasibility. We evaluated two distinct methodologies on three undirected networks: Wiki-Vote, Email-Enron, and AS-Skitter. 
+
+First, from \textit{Efficient Algorithms for Densest Subgraph Discovery}, we implemented Algorithm 1 (Exact) and Algorithm 4 (CoreExact). For these exact algorithms, we specifically set $h=3$ to compute the triangular (3-clique) density. This approach shrinks the graph via $k$-core decompositions before applying parametric maximum flow. Second, from \textit{Flowless: Extracting Densest Subgraphs Without Flow Computations}, we implemented Algorithm 1 (GREEDY) and Algorithm 2 (GREEDY++). These algorithms bypass flow computations entirely, relying instead on iterative degree-based peeling.
+
+\subsection*{Algorithmic Preference: Greedy vs. Exact}
+
+For large-scale graphs, greedy approximations are strongly preferred. While exact flow methods guarantee optimality, their worst-case complexity scales poorly, often stalling on dense graphs. Conversely, greedy approaches provide a $1/2$-approximation in near-linear time. Our C++ implementations processed massive datasets like Wiki-Vote efficiently, proving that the memory and speed advantages of greedy peeling heavily outweigh the practical necessity of an exact mathematical optimum.
+
+\begin{table}[htbp]
+    \centering
+    \label{tab:algo_complexity}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{@{} l l p{6cm} @{}}
+        \toprule
+        \textbf{Algorithm} & \textbf{Worst-Case Complexity} & \textbf{Mechanism} \\
+        \midrule
+        \textbf{Exact} & $\mathcal{O}(V^2 E \log V)$ & Max-flow (Dinic's) on full graph \\
+        \textbf{CoreExact} & $\mathcal{O}((V+E) + V_c^2 E_c \log V_c)$ & $k$-core reduction + max-flow (Dinic's) \\
+        \textbf{GREEDY} & $\mathcal{O}(V + E)$ & Single-pass degree peeling \\
+        \textbf{GREEDY++} & $\mathcal{O}(T \cdot (V + E))$ & Multi-pass peeling (load balancing) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Complexity Comparison of Implemented Algorithms}
+
+    \vspace{1ex}
+    \raggedright
+    \footnotesize
+    \textbf{Variables:} $V, E$ (Original graph vertices/edges); $V_c, E_c$ (Reduced $k$-core vertices/edges, where $V_c \ll V, E_c \ll E$); $T$ (Number of GREEDY++ passes).
+\end{table}
+
+The sizes of Wiki-Vote, Email-Enron, and AS-Skitter is as follows 
+
+\begin{table}[htbp]
+    \centering
+    \label{tab:dataset_stats}
+    \begin{tabular}{@{} l r r @{}}
+        \toprule
+        \textbf{Dataset} & \textbf{Nodes} & \textbf{Edges} \\
+        \midrule
+        wiki-Vote   & 7,115      & 103,689       \\
+        email-Enron & 36,692     & 367,662       \\
+        as-skitter  & 1,696,415  & 11,095,298    \\
+        \bottomrule
+    \end{tabular}
+    \caption{Dataset Characteristics: Nodes and Edges Count}
+
+\end{table}
+
+\pagebreak
+
+
+
+% ─────────────────────────────────────────
+
+\section{Setup Instructions}
+\subsection{Execution Prerequisites}
+Before executing the script, verify that the following file structure is in the directory:
+
+\begin{figure}[ht]
+\centering
+\begin{minipage}{0.4\textwidth} % Adjust width as needed
+\dirtree{%
+.1 .
+.2 1\_flow1.cpp.
+.2 2\_flow4.cpp.
+.2 3\_greedy.cpp.
+.2 4\_greedypp.cpp.
+.2 Makefile.
+.2 README.md.
+.2 runall.sh.
+.2 testcases/.
+.3 as-skitter.txt.
+.3 email-Enron.txt.
+.3 wiki-Vote.txt.
+}
+\end{minipage}
+\caption{Directory Structure}
+\label{fig:dir_structure}
+\end{figure}
+\subsection{Execution Steps}
+To execute the analysis, follow these steps in the terminal:
+
+\begin{enumerate}
+    \item Grant execution permission
+    \begin{verbatim}
+    chmod +X runall.sh
+    \end{verbatim}
+    
+    \item Run the script for all outputs
+    \begin{verbatim}
+    ./runall.sh
+    \end{verbatim}
+
+    \item To get outputs only for one testcase, run the following
+    \begin{verbatim}
+    ./runall.sh <path to testcase>
+    \end{verbatim}
+\end{enumerate}
+\pagebreak
+
+\section{Program Outputs}
+
+\subsection{Dataset 1: email-Enron}
+
+\subsubsection*{Exact (h=3)}
+\begin{verbatim}
+Density                 : 404.456186
+Number of Nodes         : 388
+Number of Edges         : 14088
+First 5 Sorted Nodes    : 56 , 72 , 74 , 75 , 76
+Time Taken              : 25.6352s
+Peak Memory Usage       : 177.05 MB
+\end{verbatim}
+
+\subsubsection*{CoreExact (h=3)}
+\begin{verbatim}
+Density                 : 404.456186
+Number of Nodes         : 388
+Number of Edges         : 14088
+First 5 Sorted Nodes    : 56 , 72 , 74 , 75 , 76
+Time Taken              : 2.5870s
+Peak Memory Usage       : 85.04 MB
+\end{verbatim}
+
+\subsubsection*{GREEDY}
+\begin{verbatim}
+Algorithm: Greedy
+Density                 : 37.344144
+Number of Nodes         : 555
+Number of Edges         : 20726
+First 5 Sorted Nodes    : 27 , 46 , 53 , 54 , 56 
+Time Taken              : 0.1167s
+Peak Memory Usage       : 15.36 MB
+\end{verbatim}
+
+\subsubsection*{GREEDY++}
+\begin{verbatim}
+Algorithm: Greedy++
+Density                 : 37.344144
+Number of Nodes         : 555
+Number of Edges         : 20726
+First 5 Sorted Nodes    : 27 , 46 , 53 , 54 , 56 
+Time Taken              : 0.1045s
+Peak Memory Usage       : 15.37 MB
+\end{verbatim}
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{@{} l *{5}{X} @{}}
+        \toprule
+        \thead{Algorithm} & \thead{Time\\Taken} & \thead{Peak\\Memory} & \thead{Density} & \thead{Nodes} & \thead{Edges} \\
+        \midrule
+        Exact     & 25.6352s & 177.05 MB & 404.456186 & 388 & 14088 \\
+        CoreExact & 2.5870s  & 85.04 MB  & 404.456186 & 388 & 14088 \\
+        GREEDY    & 0.1167s  & 15.36 MB  & 37.344144  & 555 & 20726 \\
+        GREEDY++  & 0.1045s  & 15.37 MB  & 37.344144  & 555 & 20726 \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Statistics for email-Enron Testcase}
+    \label{tab:enron_performance}
+\end{table}
+
+\pagebreak
+
+\subsection{Dataset 2: wiki-Vote}
+
+\subsubsection*{Exact (h=3)}
+\begin{verbatim}
+Density                 : 504.334764
+Number of Nodes         : 466
+Number of Edges         : 20520
+First 5 Sorted Nodes    : 11 , 15 , 24 , 36 , 68 
+Time Taken              : 18.3862s
+Peak Memory Usage       : 132.20 MB
+\end{verbatim}
+
+\subsubsection*{CoreExact (h=3)}
+\begin{verbatim}
+Density                 : 504.334764
+Number of Nodes         : 466
+Number of Edges         : 20520
+First 5 Sorted Nodes    : 11 , 15 , 24 , 36 , 68 
+Time Taken              : 4.3816s
+Peak Memory Usage       : 96.52 MB
+\end{verbatim}
+
+\subsubsection*{GREEDY}
+\begin{verbatim}
+Density                 : 46.275414
+Number of Nodes         : 846
+Number of Edges         : 39149
+First 5 Sorted Nodes    : 6 , 11 , 15 , 20 , 24
+Time Taken              : 0.0458s
+Peak Memory Usage       : 13.40 MB
+\end{verbatim}
+
+\subsubsection*{GREEDY++}
+\begin{verbatim}
+Density                 : 46.279042
+Number of Nodes         : 835
+Number of Edges         : 38643
+First 5 Sorted Nodes    : 6 , 11 , 15 , 20 , 24
+Time Taken              : 0.0392s
+Peak Memory Usage       : 13.23 MB
+\end{verbatim}
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{@{} l *{5}{X} @{}}
+        \toprule
+        \thead{Algorithm} & \thead{Time\\Taken} & \thead{Peak\\Memory} & \thead{Density} & \thead{Nodes} & \thead{Edges} \\
+        \midrule
+        Exact     & 18.3862s & 132.20 MB & 504.334764 & 466 & 20520 \\
+        CoreExact & 4.3816s  & 96.52 MB  & 504.334764 & 466 & 20520 \\
+        GREEDY    & 0.0458s  & 13.40 MB  & 46.275414  & 846 & 39149 \\
+        GREEDY++  & 0.0392s  & 13.23 MB  & 46.279042  & 835 & 38643 \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Statistics for wiki-Vote Testcase}
+    \label{tab:wiki_performance}
+\end{table}
+
+\pagebreak
+
+\subsection{Dataset 3: as-Skitter}
+
+
+\subsubsection*{Exact (h=3)}
+\begin{verbatim}
+Density                 : 3366.622328
+Number of Nodes         : 421
+Number of Edges         : 37391
+First 5 Sorted Nodes    : 801 , 1027 , 1039 , 1080 , 1122
+Time Taken              : 972.9784s
+Peak Memory Usage       : 7546.20 MB
+\end{verbatim}
+
+\subsubsection*{CoreExact (h=3)}
+\begin{verbatim}
+Density                 : 3366.622328
+Number of Nodes         : 421
+Number of Edges         : 37391
+First 5 Sorted Nodes    : 801 , 1027 , 1039 , 1080 , 1122
+Time Taken              : 37.1809s
+Peak Memory Usage       : 1715.42 MB
+\end{verbatim}
+
+\subsubsection*{GREEDY}
+\begin{verbatim}
+Density                 : 89.117096
+Number of Nodes         : 427
+Number of Edges         : 38053
+First 5 Sorted Nodes    : 801 , 1039 , 1080 , 1122 , 1169
+Time Taken              : 7.7980s
+Peak Memory Usage       : 695.65 MB
+\end{verbatim}
+
+\subsubsection*{GREEDY++}
+\begin{verbatim}
+Density                 : 89.400862
+Number of Nodes         : 464
+Number of Edges         : 41482
+First 5 Sorted Nodes    : 801 , 1027 , 1039 , 1080 , 1122
+Time Taken              : 5.8626s
+Peak Memory Usage       : 695.99 MB
+\end{verbatim}
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{@{} l *{5}{X} @{}}
+        \toprule
+        \thead{Algorithm} & \thead{Time\\Taken} & \thead{Peak\\Memory} & \thead{Density} & \thead{Nodes} & \thead{Edges} \\
+        \midrule
+        Exact     & 972.9784s & 7546.20 MB & 3366.622328 & 421 & 37391 \\
+        CoreExact & 37.1809s  & 1715.42 MB & 3366.622328 & 421 & 37391 \\
+        GREEDY    & 7.7980s   & 695.65 MB  & 89.117096   & 427 & 38053 \\
+        GREEDY++  & 5.8626s   & 695.99 MB  & 89.400862   & 464 & 41482 \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Statistics for as-skitter Testcase}
+    \label{tab:skitter_performance}
+\end{table}
+
+\pagebreak
+\section{Flow Algorithm Usage Choice}
+
+To compute the maximum flow for the \textbf{Exact} and \textbf{CoreExact} algorithms detailed in the work on Densest Subgraph Discovery, we implemented Dinic's algorithm rather than the Edmonds-Karp algorithm. This selection is justified by Dinic's strictly superior worst-case time complexity, which is critical for maintaining performance when processing massive, highly connected graphs.
+
+\begin{table}[htbp]
+    \centering
+    \label{tab:complexity_comparison}
+    \renewcommand{\arraystretch}{1.3}
+    % The last column is changed to p{6.5cm} to prevent border overflow
+    \begin{tabular}{@{} l c p{6.5cm} @{}}
+        \toprule
+        \textbf{Algorithm} & \textbf{Time Complexity} & \textbf{Path Finding Mechanism} \\
+        \midrule
+        Edmonds-Karp & $\mathcal{O}(V E^2)$ & Single shortest augmenting path \newline (BFS only) \\
+        Dinic's Algorithm & $\mathcal{O}(V^2 E)$ & Simultaneous blocking flows \newline (BFS + DFS) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Theoretical Time Complexity Comparison of Maximum Flow Algorithms}
+\end{table}
+
+\subsection*{Theoretical Execution Time Estimation}
+
+To contextualize the performance improvement provided by Dinic's algorithm, we formulate an estimation model for the Edmonds-Karp execution time ($T_{EK}$) based on the recorded execution time of Dinic's algorithm ($T_{Dinic}$). 
+
+By analyzing the ratio of their worst-case theoretical bounds, we can isolate the scaling factor driven by network density:
+
+\begin{equation}
+    \text{Ratio} = \frac{\mathcal{O}(V E^2)}{\mathcal{O}(V^2 E)} = \frac{E}{V}
+\end{equation}
+
+Assuming the constant factors hidden by the asymptotic notation are roughly equivalent for dense graphs, the estimated execution time for Edmonds-Karp scales proportionally to the average node degree ($E/V$):
+
+\begin{equation}
+    T_{EK} \approx T_{Dinic} \times \left( \frac{E}{V} \right)
+\end{equation}
+
+Applying this estimation model to as-skitter which consists of $V = 1,696,415$ vertices and $E = 11,095,298$ edges—and using our recorded Dinic's algorithm execution time of $T_{Dinic} = 941$ seconds, we can project the theoretical execution time for Edmonds-Karp:
+
+\begin{equation}
+    T_{EK} \approx 941\text{ s} \times \left( \frac{11,095,298}{1,696,415} \right)
+\end{equation}
+
+\begin{equation*}
+    T_{EK} \approx 941\text{ s} \times 6.54 \approx 6154.5\text{ s}
+\end{equation*}
+
+Converting this result yields approximately $1.71$ hours. This estimation demonstrates that Edmonds-Karp would take nearly two hours to process the same graph that Dinic's algorithm solved in roughly 15 minutes. This drastic disparityclearly dictates the necessity of Dinic's algorithm for the dataset.
+
+\pagebreak
+\end{document}
+
